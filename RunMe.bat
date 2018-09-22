@@ -1,4 +1,13 @@
 @echo OFF
+echo Administrative permissions required. Detecting permissions...
+net session >nul 2>&1
+if %errorLevel% == 0 (
+   	echo Success: Administrative permissions confirmed.
+) else (
+	echo Failure: Please run this script from within an Admin Shell!
+	pause
+	exit /B 1
+)
 SETLOCAL ENABLEEXTENSIONS
 SETLOCAL ENABLEDELAYEDEXPANSION
 cd /d %~dp0
@@ -10,6 +19,7 @@ set "s_out=source"
 set "a_out=__MODDED_APK_OUT__"
 set pCounter=1
 set "keepSource=delete"
+set "lang=false"
 set FilePersist=%~dpn0+.cmd&     rem --define the filename where persistent variables get stored
 rd /S /Q %p_out% >nul 2>&1
 rd /S /Q %d_out% >nul 2>&1
@@ -55,6 +65,7 @@ for /f "tokens=1,* delims=. " %%X in ('dir /b %patches%\*.patch') do (
   ) else if !pCounter! == 2 ( echo.!scan![S]ource: !keepSource!
   ) else if !pCounter! == 3 ( echo.!scan![R]eadme
   ) else if !pCounter! == 4 ( echo.!scan![D]escriptions
+  ) else if !pCounter! == 5 ( echo.!scan![L]anguages: !lang!
   ) else echo.!scan!
  set patch!pCounter!=%%X
  set /a pCounter=!pCounter!+1 )
@@ -89,6 +100,10 @@ cls
 more Patch-Descriptions.txt
 pause
 GOTO:EOF
+:menu_L - Add additonal languages if present
+if !lang!==true (set lang=false) else (set lang=true)
+cls
+goto:EOF
 :menu_P - Start Patching
 md %a_out%
 md %p_out%
@@ -102,7 +117,10 @@ for /f "tokens=*" %%f in ('dir /b %patches%\*.patch') do ( copy %patches%\%%f %p
 rename "%patches%\origin.patch" origin
 echo.-: Decompiling original apk...
 java -jar tools\apktool.jar d -o %d_out% PutApkHere\orig.apk
-xcopy %patches%\lang %d_out%\res\ /s /e /i
+if !lang!==true (
+  echo.-: Copy additional languages ...
+  xcopy %patches%\lang %d_out%\res\ /s /e /i
+)
 cd %d_out%
 ..\tools\patch  -l -s -p1 -N -r - < ..\%p_out%\origin.patch
 if exist "..\%patches%\so2.bspatch" (
@@ -114,7 +132,15 @@ for /f "tokens=1,* delims=. " %%f in ('dir /b ..\%p_out%\*.patch') do ( if /i "!
   if "%%f"=="removeOnlinefunction" ( echo.-: Supporting with so.bspatch...
    ..\tools\bspatch lib\armeabi-v7a\libSDKRelativeJNI.so lib\armeabi-v7a\libSDKRelativeJNI-n.so ..\%patches%\so.bspatch"
    del /f /q "lib\armeabi-v7a\libSDKRelativeJNI.so"
-   rename "lib\armeabi-v7a\libSDKRelativeJNI-n.so" libSDKRelativeJNI.so ) ) )
+   rename "lib\armeabi-v7a\libSDKRelativeJNI-n.so" libSDKRelativeJNI.so )
+   if "%%f"=="removeNFZ_ApplicationPart" ( echo.-: Deleting all NFZ db all files...
+   del /f /q "assets\expansion\internal\flysafe\dji.nfzdb.confumix"
+   del /f /q "assets\expansion\internal\flysafe\dji.nfzdb.sig"
+   del /f /q "assets\expansion\internal\flysafe\flysafe_areas_djigo.db"
+   del /f /q "assets\expansion\internal\flysafe\flysafe_polygon_1860.db"
+   del /f /q "assets\expansion\internal\flysafe\flyforbid_airmap\*.json"
+   del /f /q "res\raw\flyforbid.json"
+   copy /b NUL "res\raw\flyforbid.json" ) ) )
 REM nothing
 REM here
 cd ..
@@ -142,8 +168,8 @@ exit
 ::-----------------------------------------------------------
 :: helpers here
 ::-----------------------------------------------------------
-:sleep -– waits some seconds before returning
-::     -- %~1 – in, number of seconds to wait
+:sleep :: -- waits some seconds before returning
+::        -- %~1 – in, number of seconds to wait
 FOR /l %%a in (%~1,-1,1) do (ping -n 2 -w 1 127.0.0.1>NUL)
 GOTO:EOF
 :chkinst -- check for required items

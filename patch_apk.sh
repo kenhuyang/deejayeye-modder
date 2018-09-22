@@ -3,10 +3,11 @@
 # Part of original RunMe.sh script that handles patching the apk found
 # in subdirectory PutApkHere that have been decompiled
 #
-# script is modified to take 2 arguments
+# script is modified to take 3 arguments
 #
 # First argument  : name of the decompiled apk directory e.g. decompile_out
 # Second argument : timestamp for generating the logs with autogeneration if empty
+# Third argument : bool value if additional languages should be added or not
 
 err=0
 
@@ -86,12 +87,27 @@ do
 			mv lib/armeabi-v7a/libSDKRelativeJNI-n.so lib/armeabi-v7a/libSDKRelativeJNI.so
 	fi
 	
+	  if [ "$patch" == "removeNFZ_ApplicationPart" ]
+  then
+      rm assets/expansion/internal/flysafe/dji.nfzdb.confumix
+      rm assets/expansion/internal/flysafe/dji.nfzdb.sig
+      rm assets/expansion/internal/flysafe/flysafe_areas_djigo.db
+      rm assets/expansion/internal/flysafe/flysafe_polygon_1860.db
+      rm assets/expansion/internal/flysafe/flyforbid_airmap/*.json
+      rm res/raw/flyforbid.json
+      touch res/raw/flyforbid.json
+  fi
+
+  
 	echo "    $patch" >> ../$log_file
 done
 
-if [ -d ../patches/$apkver-$apkvcode/lang ]
-then
-cp -rf ../patches/$apkver-$apkvcode/lang/. res/
+if [ "$3" == "true" ]
+	then
+	if [ -d ../patches/$apkver-$apkvcode/lang ]
+		then
+		cp -rf ../patches/$apkver-$apkvcode/lang/. res/
+	fi
 fi
 
 dos2unix ../patches/$apkver-$apkvcode/origin
